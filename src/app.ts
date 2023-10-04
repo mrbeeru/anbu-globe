@@ -86,21 +86,8 @@ function addDots() {
             dotMesh.position.set(vector.x, vector.y, vector.z);
             scene.add(dotMesh);	
         }
-		//dots.push(dotMesh);
 	}
 }
-
-// function logFps() {
-//   const time = clock.getElapsedTime();
-
-//   if (time > stats.time + 1) {
-//     console.log("FPS: " + stats.frames);
-//      stats.frames = 0;
-//     stats.time = time
-//   } else {
-//    stats.frames++;
-//   }
-// }
 
 function render() {
   requestAnimationFrame( render );
