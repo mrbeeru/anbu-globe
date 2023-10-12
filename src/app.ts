@@ -1,121 +1,174 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { sampleImage, spherePointToUV } from './utils';
+import { getSunLatitudeAndLongitude, sampleImage, spherePointToUV } from './utils';
 import Stats from 'three/addons/libs/stats.module.js';
-
+import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 
 // Create an empty scene
 var scene = new THREE.Scene();
+const light = new THREE.DirectionalLight( 0xffffff, 5 );
+scene.add( light );
 
-// Create clock
-var clock = new THREE.Clock();
-
+// Renderer
 var renderer = new THREE.WebGLRenderer();
-
-// Configure renderer clear color
 renderer.setClearColor("#000000");
-
-// Configure renderer size
 renderer.setSize( window.innerWidth, window.innerHeight );
-
-// Append Renderer to DOM
 document.body.appendChild( renderer.domElement );
 
-// Create a basic perspective camera
-var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 1, 1600 );
-camera.position.z = 1200
+// setup camera
+var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 1, 3200 );
+camera.position.set(1000, 600, 200) // start from europe
 
+// setup controls
 const controls = new OrbitControls( camera, renderer.domElement );
+controls.autoRotate = true
+controls.autoRotateSpeed *= -0.3;
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
 
+// setup fps
 const stats = new Stats();
 document.body.appendChild( stats.dom );
 
-// ------------------------------------------------
-// FUN STARTS HERE
-// ------------------------------------------------
-// let stats = {
-// 	frames: 0,
-// 	time: 0,
-// };
-
 const SPHERE_RADIUS = 600;
+const DOT_COUNT = 200000;
+const DOT_SPHERE_RADIUS = SPHERE_RADIUS + 30;
 
-// Create N tiny dots and spiral them around the sphere.
-const DOT_COUNT = 80000;
-const DOT_SPHERE_RADIUS = SPHERE_RADIUS + 10;
+// holds the image that is used to mask the dots
+let imageData: ImageData
 
-const geometry = new THREE.SphereGeometry( SPHERE_RADIUS, 128, 128 );
-//const geometry = new THREE.BoxGeometry( 10, 10, 10 );
-const material = new THREE.MeshBasicMaterial( { color: 0xffff00 } ); 
-const sphere = new THREE.Mesh( geometry, material ); 
-	
-sphere.position.set(0,0,0);
-scene.add( sphere );
-
-
-// A hexagon with a radius of 2 pixels looks like a circle
-const dotGeometry = new THREE.CircleGeometry(2, 5);
-const dotMaterial = new THREE.MeshBasicMaterial( { color: 0x2222FF} ); 
-
+const sun = getSunLatitudeAndLongitude(new Date());
+setLightPosition(sun.latitude, sun.longitude)
 
 export default function init() {
   loadImage();
 }
 
+function setLightPosition(lat: number, lon: number) {
+  const mappedLat = lat  // lat is NS
+  const mappedLon = lon // lon is EW
+  
+  const x = SPHERE_RADIUS * 1.2 * Math.cos(mappedLat * Math.PI/180) * Math.cos(mappedLon * Math.PI/180)
+  const y = SPHERE_RADIUS * 1.2 * Math.cos(mappedLat * Math.PI/180) * Math.sin(mappedLon * Math.PI/180)
+  const z = SPHERE_RADIUS * 1.2 * Math.sin(mappedLat * Math.PI/180)
+
+  light.position.set(x, z, y);
+}
+
+function addSphere() {
+  const geometry = new THREE.SphereGeometry( SPHERE_RADIUS, 128, 128 );
+  const material = new THREE.MeshPhongMaterial( {
+     color: '#0f284c', 
+     opacity: 1, 
+     transparent: true, 
+     shininess: 0,} ); 
+  const sphere = new THREE.Mesh( geometry, material ); 
+  
+  sphere.position.set(0,0,0);
+  scene.add( sphere );
+}
+
+function addNormalLine(lat: number, lon: number) {
+
+  //latitude doesn't work good at poles
+  const mappedLat = lat  // lat is NS
+  const mappedLon = -lon // lon is EW
+
+  const x = SPHERE_RADIUS * 1.2 * Math.cos(mappedLat * Math.PI/180) * Math.cos(mappedLon * Math.PI/180)
+  const y = SPHERE_RADIUS * 1.2 * Math.cos(mappedLat * Math.PI/180) * Math.sin(mappedLon * Math.PI/180)
+  const z = SPHERE_RADIUS * 1.2 * Math.sin(mappedLat * Math.PI/180)
+
+  const points = [];
+  points.push( new THREE.Vector3( x/1.2, z/1.2, y/1.2 ) );
+  points.push( new THREE.Vector3( x, z, y ));
+
+  const geometry = new THREE.BufferGeometry().setFromPoints( points );
+  const tubeGeometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), points.length * 10, 1, 8, false);
+  const material = new THREE.LineBasicMaterial( { color: 0x0000ff, linewidth: 22 } );
+
+  const line = new THREE.Line( tubeGeometry, material );
+
+  scene.add(line)
+}
+
+function addIndicators() {
+  //poles
+  //addNormalLine(90, 0);
+  //addNormalLine(-90, 0);
+
+  //hawai
+  addNormalLine(19.64, -155.517);
+
+  //london
+  addNormalLine(51.5072, -0.1276);
+
+  //bucharest
+  addNormalLine(44.4268, 26.1025);
+
+  //frankfurt
+  addNormalLine(50.1109, 8.6821);
+
+  //kyiv
+  addNormalLine(50.4501, 30.5234);
+
+  //new york
+  addNormalLine(40, -74);
+}
+
 function addDots() {
+  const dotGeometry = new THREE.CircleGeometry(2, 12);
+
   const vector = new THREE.Vector3();
+  const geometries = [];
 
-	for (let i = DOT_COUNT; i >= 0; i--) 
-	{
-  		const phi = Math.acos(-1 + (2 * i) / DOT_COUNT);
-  		const theta = Math.sqrt(DOT_COUNT * Math.PI) * phi;
-	
-  		// Pass the angle between this dot an the Y-axis (phi)
-  		// Pass this dot’s angle around the y axis (theta)
-  		// Scale each position by 600 (the radius of the globe)
-  		vector.setFromSphericalCoords(DOT_SPHERE_RADIUS, phi, theta);
-  		const dotMesh = new THREE.Mesh( dotGeometry, dotMaterial ); 
-	
-        const uv = spherePointToUV(vector);
-        const sampledPixel = sampleImage(imageData, uv);
+  for (let i = DOT_COUNT; i >= 0; i--) {
+    const phi = Math.acos(-1 + (2 * i) / DOT_COUNT);
+    const theta = Math.sqrt(DOT_COUNT * Math.PI) * phi;
 
-  		// Move the dot to the newly calculated position
+    vector.setFromSphericalCoords(DOT_SPHERE_RADIUS, phi, theta);
+    const uv = spherePointToUV(vector);
+    const sampledPixel = sampleImage(imageData, uv);
+    
+    if (sampledPixel[3]) {
+      const clone = dotGeometry.clone();
+      clone.lookAt(vector);
+      clone.translate(vector.x, vector.y, vector.z);
 
-        if (sampledPixel[3]) {
-            dotMesh.lookAt(vector.x, vector.y, vector.z);
-            dotMesh.position.set(vector.x, vector.y, vector.z);
-            scene.add(dotMesh);	
-        }
-	}
+      // Set a color for each vertex of the dotGeometry
+      let dotColor = new THREE.Color(0x285d92);
+      const colors = [];
+      
+      for (let j = 0; j < clone.attributes.position.count; j++) {
+        colors.push(dotColor.r, dotColor.g, dotColor.b);
+      }
+
+      clone.setAttribute('color', new THREE.BufferAttribute(new Float32Array(colors), 3));
+      geometries.push(clone);
+    }
+  }
+
+  const mergedGeometry = BufferGeometryUtils.mergeGeometries(geometries);
+  const dotMaterial = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide });
+  const mergedMesh = new THREE.Mesh(mergedGeometry, dotMaterial);
+
+  scene.add(mergedMesh);
 }
 
 function render() {
   requestAnimationFrame( render );
 
-  //logFps()
-  orbitCamera();
+  controls.update();
   stats.update();
-
   renderer.render(scene, camera);
 };
-
-function orbitCamera() {
-  //const rotationSpeed = 1/8;
-
-  //const x = SPHERE_RADIUS * Math.sin( clock.getElapsedTime() * rotationSpeed ) * 2;
-  //const z = SPHERE_RADIUS * Math.cos( clock.getElapsedTime() * rotationSpeed ) * 2;
-
-  //camera.position.copy( sphere.position ).add( new THREE.Vector3(x,0,z));
-  //camera.lookAt( sphere.position );
-  controls.update();
-}
-
-var imageData: ImageData
 
 async function loadImage(){
   const image = new Image();
   image.crossOrigin = "Anonymous"
-  image.src = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/World_map_blank_without_borders.svg/4378px-World_map_blank_without_borders.svg.png"
+  //image.src = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/World_map_blank_without_borders.svg/4378px-World_map_blank_without_borders.svg.png"
+  image.src = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/Equirectangular_projection_world_map_without_borders.svg/2560px-Equirectangular_projection_world_map_without_borders.svg.png"
+  //image.src = "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/10x10_checkered_board_transparent.svg/1024px-10x10_checkered_board_transparent.svg.png"
+  //image.src = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Mercator_Projection.svg/1280px-Mercator_Projection.svg.png"
 
   image.onload = ( () => {
     // Create an HTML canvas, get its context and draw the image on it.
@@ -134,12 +187,11 @@ async function loadImage(){
 
     // Read the image data from the canvas context.
     const imgData = ctx.getImageData(0, 0, image.width, image.height);
-
     imageData = imgData;
-    console.log(imgData)
-
-      addDots();
+  
+    addIndicators();
+    addSphere();
+    addDots();
     render();
-
   });
 }
