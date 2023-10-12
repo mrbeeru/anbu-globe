@@ -1,12 +1,12 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { getSunLatitudeAndLongitude, sampleImage, spherePointToUV } from './utils';
+import { getSunLatitudeAndLongitude, latLonToXYZ, sampleImage, spherePointToUV } from './utils';
 import Stats from 'three/addons/libs/stats.module.js';
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 
 // Create an empty scene
 var scene = new THREE.Scene();
-const light = new THREE.DirectionalLight( 0xffffff, 5 );
+const light = new THREE.DirectionalLight( 0xffffff, 3 );
 scene.add( light );
 
 // Renderer
@@ -45,23 +45,19 @@ export default function init() {
 }
 
 function setLightPosition(lat: number, lon: number) {
-  const mappedLat = lat  // lat is NS
-  const mappedLon = lon // lon is EW
-  
-  const x = SPHERE_RADIUS * 1.2 * Math.cos(mappedLat * Math.PI/180) * Math.cos(mappedLon * Math.PI/180)
-  const y = SPHERE_RADIUS * 1.2 * Math.cos(mappedLat * Math.PI/180) * Math.sin(mappedLon * Math.PI/180)
-  const z = SPHERE_RADIUS * 1.2 * Math.sin(mappedLat * Math.PI/180)
+  const {x, y, z} = latLonToXYZ(lat, lon, SPHERE_RADIUS * 2)
 
   light.position.set(x, z, y);
 }
 
 function addSphere() {
-  const geometry = new THREE.SphereGeometry( SPHERE_RADIUS, 128, 128 );
+  const geometry = new THREE.SphereGeometry( SPHERE_RADIUS, 256, 256 );
   const material = new THREE.MeshPhongMaterial( {
      color: '#0f284c', 
-     opacity: 1, 
+     opacity: 0.9, 
      transparent: true, 
-     shininess: 0,} ); 
+     shininess: 5,
+    } ); 
   const sphere = new THREE.Mesh( geometry, material ); 
   
   sphere.position.set(0,0,0);
@@ -69,23 +65,14 @@ function addSphere() {
 }
 
 function addNormalLine(lat: number, lon: number) {
-
-  //latitude doesn't work good at poles
-  const mappedLat = lat  // lat is NS
-  const mappedLon = -lon // lon is EW
-
-  const x = SPHERE_RADIUS * 1.2 * Math.cos(mappedLat * Math.PI/180) * Math.cos(mappedLon * Math.PI/180)
-  const y = SPHERE_RADIUS * 1.2 * Math.cos(mappedLat * Math.PI/180) * Math.sin(mappedLon * Math.PI/180)
-  const z = SPHERE_RADIUS * 1.2 * Math.sin(mappedLat * Math.PI/180)
+  const {x, y, z} = latLonToXYZ(lat, -lon, SPHERE_RADIUS);
 
   const points = [];
-  points.push( new THREE.Vector3( x/1.2, z/1.2, y/1.2 ) );
   points.push( new THREE.Vector3( x, z, y ));
+  points.push( new THREE.Vector3( x * 1.2, z * 1.2, y * 1.2 ) );
 
-  const geometry = new THREE.BufferGeometry().setFromPoints( points );
   const tubeGeometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), points.length * 10, 1, 8, false);
   const material = new THREE.LineBasicMaterial( { color: 0x0000ff, linewidth: 22 } );
-
   const line = new THREE.Line( tubeGeometry, material );
 
   scene.add(line)
@@ -97,10 +84,10 @@ function addIndicators() {
   //addNormalLine(-90, 0);
 
   //hawai
-  addNormalLine(19.64, -155.517);
+  //addNormalLine(19.64, -155.517);
 
   //london
-  addNormalLine(51.5072, -0.1276);
+  //addNormalLine(51.5072, -0.1276);
 
   //bucharest
   addNormalLine(44.4268, 26.1025);
@@ -112,7 +99,7 @@ function addIndicators() {
   addNormalLine(50.4501, 30.5234);
 
   //new york
-  addNormalLine(40, -74);
+  //addNormalLine(40, -74);
 }
 
 function addDots() {
@@ -165,10 +152,7 @@ function render() {
 async function loadImage(){
   const image = new Image();
   image.crossOrigin = "Anonymous"
-  //image.src = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/World_map_blank_without_borders.svg/4378px-World_map_blank_without_borders.svg.png"
-  image.src = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/Equirectangular_projection_world_map_without_borders.svg/2560px-Equirectangular_projection_world_map_without_borders.svg.png"
-  //image.src = "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/10x10_checkered_board_transparent.svg/1024px-10x10_checkered_board_transparent.svg.png"
-  //image.src = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Mercator_Projection.svg/1280px-Mercator_Projection.svg.png"
+  image.src = "eq_proj.png"
 
   image.onload = ( () => {
     // Create an HTML canvas, get its context and draw the image on it.

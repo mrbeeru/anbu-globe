@@ -47,4 +47,11 @@ export function getSunLatitudeAndLongitude(dateTime: Date) {
 
  return { latitude, longitude };
 }
-  
+
+export function latLonToXYZ(lat: number, lon: number, r: number) {
+  const x = r * Math.cos(lat * Math.PI/180) * Math.cos(lon * Math.PI/180)
+  const y = r * Math.cos(lat * Math.PI/180) * Math.sin(lon * Math.PI/180)
+  const z = r * Math.sin(lat * Math.PI/180)
+
+  return {x, y, z}
+}
