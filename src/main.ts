@@ -17,7 +17,7 @@ let camera: THREE.PerspectiveCamera
 let controls: OrbitControls
 let stats: Stats
 const raycaster = new THREE.Raycaster()
-const pointer = new THREE.Vector2()
+const pointer = {pos: new THREE.Vector2(), normalizedPos: new THREE.Vector2()}
 const intersectionObjects: THREE.Mesh[] = []
 const intersectionDetailsMap: Map<unknown, string | undefined> = new Map<unknown, string | undefined>();
 
@@ -50,7 +50,7 @@ function initRenderer() {
   renderer = new THREE.WebGL1Renderer()
   renderer.setClearColor('#000000')
   renderer.setSize(window.innerWidth, window.innerHeight)
-  document.body.appendChild(renderer.domElement)
+  document.getElementById('app')?.appendChild(renderer.domElement)
 }
 
 function initLight() {
@@ -77,10 +77,11 @@ function initStats() {
 
 function initOrbitControls() {
   controls = new OrbitControls(camera, renderer.domElement)
-  //controls.autoRotate = true
-  controls.autoRotateSpeed *= -0.3
+  controls.autoRotate = true
+  controls.autoRotateSpeed *= -0.2
   controls.enableDamping = true
   controls.dampingFactor = 0.05
+  controls.enablePan = false;
 }
 
 function setLightPosition(lat: number, lon: number) {
@@ -103,28 +104,28 @@ function addSphere() {
   scene.add(sphere)
 }
 
-function addNormalLine(lat: number, lon: number) {
-  const { x, y, z } = latLonToXYZ(lat, -lon, SPHERE_RADIUS)
+// function addNormalLine(lat: number, lon: number) {
+//   const { x, y, z } = latLonToXYZ(lat, -lon, SPHERE_RADIUS)
 
-  const points = []
-  points.push(new THREE.Vector3(x, z, y))
-  points.push(new THREE.Vector3(x * 1.2, z * 1.2, y * 1.2))
+//   const points = []
+//   points.push(new THREE.Vector3(x, z, y))
+//   points.push(new THREE.Vector3(x * 1.2, z * 1.2, y * 1.2))
 
-  const tubeGeometry = new THREE.TubeGeometry(
-    new THREE.CatmullRomCurve3(points),
-    points.length * 10,
-    1,
-    8,
-    false
-  )
-  const material = new THREE.LineBasicMaterial({
-    color: 0x0000ff,
-    linewidth: 22,
-  })
-  const line = new THREE.Line(tubeGeometry, material)
+//   const tubeGeometry = new THREE.TubeGeometry(
+//     new THREE.CatmullRomCurve3(points),
+//     points.length * 10,
+//     1,
+//     8,
+//     false
+//   )
+//   const material = new THREE.LineBasicMaterial({
+//     color: 0x0000ff,
+//     linewidth: 22,
+//   })
+//   const line = new THREE.Line(tubeGeometry, material)
 
-  scene.add(line)
-}
+//   scene.add(line)
+// }
 
 function addIndicator(lat: number, lon: number, details?: string) {
   const dotGeometry = new THREE.CircleGeometry(5, 12)
@@ -217,7 +218,8 @@ function addDots() {
 function render() {
   requestAnimationFrame(render)
 
-  raycaster.setFromCamera(pointer, camera)
+ 
+  checkIntersections();
   controls.update()
   stats.update()
   renderer.render(scene, camera)
@@ -254,29 +256,35 @@ async function loadImage() {
 }
 
 function onPointerMove(event: MouseEvent) {
+  pointer.pos.x = event.offsetX;
+  pointer.pos.y = event.offsetY;
+}
+
+function checkIntersections() {
   // calculate pointer position in normalized device coordinates
   // (-1 to +1) for both components
+  pointer.normalizedPos.x = (pointer.pos.x / renderer.domElement.width) * 2 - 1
+  pointer.normalizedPos.y = -(pointer.pos.y / renderer.domElement.height) * 2 + 1
 
-  pointer.x = (event.offsetX / renderer.domElement.width) * 2 - 1
-  pointer.y = -(event.offsetY / renderer.domElement.height) * 2 + 1
-
-  raycaster.setFromCamera(pointer, camera)
+  raycaster.setFromCamera(pointer.normalizedPos , camera)
   const intersects = raycaster.intersectObjects(intersectionObjects, false)
 
   if (intersects.length > 0) {
+    controls.autoRotate = false;
+
     const element = document.getElementById('tooltip-info')
 
     if (element) {
-      element.style.visibility = 'visible'
-      element.style.left = `${event.clientX + 10}px`
-      element.style.top = `${event.clientY + 10}px`
+      element.style.display = 'inline'
+      element.style.left = `${pointer.pos.x + 10}px`
+      element.style.top = `${pointer.pos.y + 10}px`
       element.innerHTML = intersectionDetailsMap.get(intersects[0].object) || 'asd';
     }
   } else {
     const element = document.getElementById('tooltip-info')
-
+    controls.autoRotate = true;
     if (element) {
-      element.style.visibility = 'hidden'
+      element.style.display = 'none'
     }
   }
 }
