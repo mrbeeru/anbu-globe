@@ -19,6 +19,7 @@ let stats: Stats
 const raycaster = new THREE.Raycaster()
 const pointer = new THREE.Vector2()
 const intersectionObjects: THREE.Mesh[] = []
+const intersectionDetailsMap: Map<unknown, string | undefined> = new Map<unknown, string | undefined>();
 
 const SPHERE_RADIUS = 600
 const DOT_COUNT = 200000
@@ -41,6 +42,8 @@ async function init() {
   addSphere()
   addDots()
   render()
+
+  window.addEventListener('pointermove', onPointerMove)
 }
 
 function initRenderer() {
@@ -123,7 +126,7 @@ function addNormalLine(lat: number, lon: number) {
   scene.add(line)
 }
 
-function addIndicator(lat: number, lon: number) {
+function addIndicator(lat: number, lon: number, details?: string) {
   const dotGeometry = new THREE.CircleGeometry(5, 12)
   const dotMaterial = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })
   const mesh = new THREE.Mesh(dotGeometry, dotMaterial)
@@ -134,6 +137,8 @@ function addIndicator(lat: number, lon: number) {
   mesh.position.set(x, z, y)
 
   intersectionObjects.push(mesh)
+  intersectionDetailsMap.set(mesh, details)
+
   scene.add(mesh)
 }
 
@@ -150,14 +155,15 @@ function addIndicators() {
 
   //bucharest
   //addNormalLine(44.4268, 26.1025);
-  addIndicator(44.4268, 26.1025)
+  addIndicator(44.4268, 26.1025, "Bucharest")
+  
   //frankfurt
   //addNormalLine(50.1109, 8.6821);
-  addIndicator(50.1109, 8.6821)
-
+   addIndicator(50.1109, 8.6821, "Frankfurt")
+  
   //kyiv
   //addNormalLine(50.4501, 30.5234);
-  addIndicator(50.4501, 30.5234)
+  addIndicator(50.4501, 30.5234, "Kyiv")
 
   //new york
   //addNormalLine(40, -74);
@@ -264,6 +270,7 @@ function onPointerMove(event: MouseEvent) {
       element.style.visibility = 'visible'
       element.style.left = `${event.clientX + 10}px`
       element.style.top = `${event.clientY + 10}px`
+      element.innerHTML = intersectionDetailsMap.get(intersects[0].object) || 'asd';
     }
   } else {
     const element = document.getElementById('tooltip-info')
@@ -273,5 +280,3 @@ function onPointerMove(event: MouseEvent) {
     }
   }
 }
-
-window.addEventListener('pointermove', onPointerMove)
