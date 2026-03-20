@@ -58,7 +58,7 @@ where $r$ is the light distance from the globe center, and $\text{lat}$ and $\te
 This is a visual approximation rather than an astronomy-precision solar calculation, but it produces a believable moving highlight for the globe.
 
 
-### The dotted land:
+### The dotted land
 
 1. The app loads `public/eq_proj.png` into a canvas and reads its pixel data.
 2. It distributes around 200,000 sample points over a slightly larger sphere.
