@@ -69,6 +69,6 @@ This is a visual approximation rather than an astronomy-precision solar calculat
 
 City indicators are added separately as small circular meshes placed from latitude/longitude coordinates. A raycaster tracks pointer hover so the app can pause rotation and show the tooltip text for the active marker.
 
-[Globe image](docs/globe.png)
+![Globe image](docs/globe.png)
 
 
