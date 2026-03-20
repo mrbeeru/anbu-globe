@@ -1,4 +1,5 @@
 # Anbu Globe
+
 Github had such a globe on their landing page and I thought it was cool.
 This project is a small Vite + TypeScript + Three.js demo that renders an interactive 3D globe in the browser.
 The globe auto-rotates, places a few city markers on the surface, and shows a tooltip when a marker is hovered.
@@ -19,7 +20,6 @@ The globe is assembled in `src/Globe.ts` with a few separate pieces:
 - A large `SphereGeometry` with a `MeshPhongMaterial` forms the main ocean sphere.
 - A directional light is positioned from the current sun latitude and longitude so the globe has a day/night highlight.
 - Orbit controls handle camera movement and enable slow automatic rotation.
-
 
 ### Sun latitude and longitude
 
@@ -57,12 +57,11 @@ where $r$ is the light distance from the globe center, and $\text{lat}$ and $\te
 
 This is a visual approximation rather than an astronomy-precision solar calculation, but it produces a believable moving highlight for the globe.
 
-
 ### The dotted land
 
 1. The app loads `public/eq_proj.png` into a canvas and reads its pixel data.
 2. It distributes around 200,000 sample points over a slightly larger sphere.
-3. Each point is converted to UV coordinates with the helper functions in `src/utils.ts`.
+3. Each point is converted to [UV coordinates](https://en.wikipedia.org/wiki/UV_mapping) with the helper functions in `src/utils.ts`.
 4. The matching pixel is sampled from the map image.
 5. If that pixel is visible, the code places a tiny circular mesh at that position.
 6. All accepted dots are merged into one geometry for better rendering performance.
@@ -70,5 +69,3 @@ This is a visual approximation rather than an astronomy-precision solar calculat
 City indicators are added separately as small circular meshes placed from latitude/longitude coordinates. A raycaster tracks pointer hover so the app can pause rotation and show the tooltip text for the active marker.
 
 ![Globe image](docs/globe.png)
-
-
