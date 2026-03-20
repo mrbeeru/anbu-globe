@@ -5,6 +5,8 @@ This project is a small Vite + TypeScript + Three.js demo that renders an intera
 The globe auto-rotates, places a few city markers on the surface, and shows a tooltip when a marker is hovered.
 Built without AI and I'm proud of it.
 
+Demo here: https://anbu-globe.pages.dev/
+
 ## Run locally
 
 ```bash
