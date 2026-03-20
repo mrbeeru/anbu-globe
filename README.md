@@ -20,7 +20,45 @@ The globe is assembled in `src/Globe.ts` with a few separate pieces:
 - A directional light is positioned from the current sun latitude and longitude so the globe has a day/night highlight.
 - Orbit controls handle camera movement and enable slow automatic rotation.
 
-The dotted land effect is the main visual trick:
+
+### Sun latitude and longitude
+
+The light position uses a simplified sun model from `src/utils.ts`.
+
+- The latitude is approximated with a cosine curve over the day of the year, so the sun moves between about `+23.44` and `-23.44` degrees to mimic the Earth's axial tilt across the seasons.
+- The longitude is derived from the current UTC time, moving `360 / 24 = 15` degrees per hour, with noon UTC used as the baseline.
+- Those latitude/longitude values are converted into 3D Cartesian coordinates and used to place the Three.js directional light around the globe.
+
+The formulas used in the code are:
+
+$$
+	ext{latitude} = 23.44 \cdot \cos\left(\frac{2\pi(\text{dayOfYear} - 172)}{365.25}\right)
+$$
+
+$$
+	ext{longitude} = (\text{timeInHours} - 12) \cdot \frac{360}{24} + 1
+$$
+
+The light position is then computed with:
+
+$$
+x = r \cos(\text{lat}) \cos(\text{lon})
+$$
+
+$$
+y = r \cos(\text{lat}) \sin(\text{lon})
+$$
+
+$$
+z = r \sin(\text{lat})
+$$
+
+where $r$ is the light distance from the globe center, and $\text{lat}$ and $\text{lon}$ are interpreted in degrees and converted to radians inside the helper function.
+
+This is a visual approximation rather than an astronomy-precision solar calculation, but it produces a believable moving highlight for the globe.
+
+
+### The dotted land:
 
 1. The app loads `public/eq_proj.png` into a canvas and reads its pixel data.
 2. It distributes around 200,000 sample points over a slightly larger sphere.
